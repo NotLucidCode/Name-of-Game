@@ -7,7 +7,7 @@ import java.awt.event.KeyListener;
 import javax.swing.JFrame;
 
 
-public class test{
+public class mainClass{
 	static int camX = 0;
 	static int camY = 0;
 	static int sideLength = 20;
@@ -35,30 +35,34 @@ public class test{
             @Override
         	public void keyPressed(KeyEvent e) {
         		if (e.getKeyCode() == 87) {//W
-        			camY += step;
-        		} else if (e.getKeyCode() == 83) {//S
         			camY -= step;
+        		} else if (e.getKeyCode() == 83) {//S
+        			camY += step;
         		}else if (e.getKeyCode() == 65) {//A
-        			camX += step;
-        		}else if (e.getKeyCode() == 68) {//D
         			camX -= step;
+        		}else if (e.getKeyCode() == 68) {//D
+        			camX += step;
         		}
         		
         	}
         });
 		Graphics g = canvas.getGraphics();
+		World.loadWorld("World");
 		while(true) {
 			//theoretically this should be put on a 60hz loop but for now this is fine
-			for(int x = 0 + camX; Math.abs(x) < frame.getWidth();x += height) {
-				for(int y = (x- camX)/height%2==0 ? 0 + camY : 0-sideLength/2 + camY; Math.abs(y) < frame.getHeight();y += sideLength) {
-					//System.out.println(Math.abs(x) + " " + camX + " " + frame.getWidth());
-					g.setColor(Color.WHITE);
-					g.fillPolygon(new int[]{x, x, height + x},new int[]{y, y + sideLength, y + sideLength/2},3);
-					g.setColor(Color.BLACK);
-					g.fillPolygon(new int[]{x, x, x - height},new int[]{y, y + sideLength, y + sideLength/2},3);
+			for(int x = 0; x < (int) frame.getWidth() * 2 / height + 2; x++) {
+				for (int y = 0; y < (int) frame.getHeight() / sideLength + 2; y++) {
+					if(y < World.world.size() && x < World.world.get(y).size() ) {
+						g.setColor(World.world.get(y).get(x).getColor());
+					} else {
+						g.setColor(Color.BLACK);
+					}
+					int pixelX = (x - (int) x/2) * height + camX;
+					int pixelY = (x - (int) x/2) % 2 == 0 ? y * sideLength + camY : y * sideLength + camY - sideLength/2 ;
+					g.fillPolygon(new int[]{pixelX, pixelX, x % 2 == 0 ? pixelX + height : pixelX - height},new int[]{pixelY, pixelY + sideLength, pixelY + sideLength/2}, 3 );
 				}
 			}
-			System.out.println("");//actually really important if the the for loops above stop having an output (like when were at the edge of the renderable area) java will skip them and then terminate the empty while loop ending the program, later this will not be necessary as we will fill this loop with other stuff
+			System.out.print("");//actually really important: if the the for loops above stop having an output (like when were at the edge of the renderable area) java will skip them and then terminate the empty while loop ending the program, later this will not be necessary as we will fill this loop with other stuff
 		}
 
 	}
