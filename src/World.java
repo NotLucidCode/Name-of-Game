@@ -4,25 +4,27 @@ import java.util.HashMap;
 
 public class World {
 	static ArrayList<ArrayList<Tile>> world = new ArrayList<ArrayList<Tile>>();
-	public static void loadWorld(String fileName) {
-		FileReader FR = null;
-		int character, row = 0, type = 0;
-		HashMap<Integer, Tile> map = new HashMap<Integer, Tile>();
+	static FileReader FR = null;
+	static int character, row = 0, type = 0;
+	static HashMap<Integer, Tile> map = new HashMap<Integer, Tile>();
+	static {//Static initialization block
 		for(Tile t : Tile.values()) {
 			map.put(t.getType(), t);
 		}
+	}
+	public static void loadWorld(String fileName) {
 		try {
+			
 			FR = new FileReader(ResourceManager.load(fileName));
 			world.add(new ArrayList<Tile>());
 			while(true) { //reads through all characters in the file and stops on EOF (-1)
 				character = FR.read();
 				if (character == 32) {//if the character is a space reset the type
-					if (map.get(type) != null) {
+					if (map.containsKey(type)) {
 						world.get(row).add(map.get(type));
 					} else {
 						world.get(row).add(Tile.nil);
 					}
-					
 					type = 0;
 				} else if (character == 10) { //if the character is an enter add one to the row count
 					world.add(new ArrayList<Tile>());

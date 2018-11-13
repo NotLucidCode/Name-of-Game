@@ -3,7 +3,9 @@ import java.awt.Color;
 public enum Tile {
 	nil(-1, Color.MAGENTA),
 	water(0, Color.BLUE),
-	land(1, Color.GREEN);
+	land(1, Color.GREEN),
+	building(2, Color.LIGHT_GRAY),
+	buildingSlave(3, Color.WHITE);//new Color(0,0,0,0));
 	
 	private int type;
 	private Color color;
