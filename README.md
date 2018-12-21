@@ -1,1 +1,1 @@
-Name-of-Game
+Stellar
