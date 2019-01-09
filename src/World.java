@@ -20,7 +20,8 @@ public class World {
 			
 			FR = new FileReader(ResourceManager.load(fileName));
 			world.add(new ArrayList<Tile>());
-			while(true) { //reads through all characters in the file and stops on EOF (-1)
+			boolean running = true;
+			while(running) { //reads through all characters in the file and stops on EOF (-1)
 				character = FR.read();
 				if (character == 32) {//if the character is a space reset the type
 					if (tileTable.containsKey(type)) {
@@ -31,12 +32,10 @@ public class World {
 					type = 0;
 				} else if (character == 10) { //if the character is an enter add one to the row count
 					world.add(new ArrayList<Tile>());
-					world.get(row).add(tileTable.get(type));
 					type = 0;
 					row++;
-				} else if (character == -1) {// represents that we have reached the end of the file, it adds in the last number and then breaks out of the loop
-					world.get(row).add(tileTable.get(type));
-					break;
+				} else if (character == -1) {// represents that we have reached the end of the file
+					running = false;
 				} else if (character == 45) {// if the character is a - indicating a negative
 					type = - Integer.parseInt(String.valueOf(Character.toChars(FR.read())));
 				} else if (character <= 57 && character >= 48) { //general case where the character is a regular number
@@ -76,6 +75,7 @@ public class World {
 	public static void saveWorld() throws IOException {
 		int col = 0, row = 0;
 		FileWriter FW = new FileWriter(ResourceManager.load("WorldNew"));
+		
 		for (ArrayList<Tile> tiles : world) {
 			String s = "";
 			for (Tile t : tiles) {
@@ -88,7 +88,11 @@ public class World {
 			}
 			row++;
 			col = 0;
-			FW.write(s + "\n");
+			if(row < world.size()) {
+				FW.write(s + "\n");
+			} else{
+				FW.write(s);
+			}
 		}
 		FW.close();
 	}

@@ -11,13 +11,12 @@ public class ResourceManager {
 		return new File("./Content/" + fileName);
 	}
 	public static void save(String fileName, Object obj) throws IOException {
-		World.saveWorld();
-        ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(fileName)); 
+        ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream("./Content/" + fileName)); 
         out.writeObject(obj);
         out.close();
 	}
 	public static Object loadObject(String fileName) throws FileNotFoundException, IOException, ClassNotFoundException{
-        ObjectInputStream in = new ObjectInputStream(new FileInputStream(fileName)); 
+        ObjectInputStream in = new ObjectInputStream(new FileInputStream("./Content/" + fileName)); 
         Object tempObject = in.readObject();
         in.close();
         return tempObject;

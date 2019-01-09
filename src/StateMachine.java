@@ -5,7 +5,7 @@ public class StateMachine implements Runnable {
 	/**
 	 * 
 	 */
-	Render render = new Render();
+	static Render render = new Render();
 	static BuildingSaveData bsd = null;
 	
 	public void gameLoop() {

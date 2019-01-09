@@ -15,7 +15,9 @@ import java.awt.event.MouseMotionListener;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.image.BufferStrategy;
+
 import java.io.IOException;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -34,14 +36,16 @@ public class Render implements Runnable {
 	Canvas canvas = new Canvas();
 	BufferStrategy bs = null;
 	boolean running = true;
-	int WIDTH = 1920; //Toolkit.getDefaultToolkit().getScreenSize().width,
-	int HEIGHT = 1080;//Toolkit.getDefaultToolkit().getScreenSize().height;
-	GraphicsDevice device = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices()[0];
+	int WIDTH = /**1920;*/  Toolkit.getDefaultToolkit().getScreenSize().width;
+	int HEIGHT = /**1080;*/Toolkit.getDefaultToolkit().getScreenSize().height;
+	GraphicsDevice device = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
 	Graphics g = null;
 	Tile tileMode = Tile.land;
-	ArrayList<Building> buildingMenuList = new ArrayList<Building>();
-	HashMap<Polygon, Tile> buttonMap = new HashMap<Polygon, Tile>();
+	static volatile ArrayList<BuildingMenu> buildingMenuList = new ArrayList<BuildingMenu>();
+	volatile HashMap<Polygon, Tile> buttonMap = new HashMap<Polygon, Tile>();
 	int currentBuildingSize = 0;
+	boolean dragging = false;
+	BuildingMenu bMBeingDragged = null;
 	
 	public void renderWorld() {
 
@@ -99,11 +103,17 @@ public class Render implements Runnable {
 						handled = true;
 					}
 				}
+				for(BuildingMenu bM : buildingMenuList) {
+					if((e.getX() > bM.getX() && e.getX() < bM.getSizeX() + bM.getX()) && (e.getY() > bM.getY() && e.getY() < bM.getSizeY() + bM.getY())) {
+						bM.click(new Point(e.getX(), e.getY()));
+						handled = true;
+					}
+				}
 				if (!handled) {
 					//System.out.println(
 					//		"Click at " + (e.getX() + camX) * 2 / (height) + ", " + (e.getY() + camY) / sideLength);
-					int x = (int) (e.getX() - camX) * 2 / (height);
-					int y = (int) (e.getY() - camY) / sideLength;
+					int x = (int) Math.round((e.getX() - camX) * 2 / (height));
+					int y = (int) Math.round((e.getY() - camY) / sideLength);
 					if (World.world.get(y).get(x).equals(Tile.building) || World.world.get(y).get(x).equals(Tile.buildingSlave)) {
 						Point p = new Point(x,y);
 						if (World.world.get(y).get(x).equals(Tile.buildingSlave)) {
@@ -111,7 +121,7 @@ public class Render implements Runnable {
 						}
 						for(Building b : StateMachine.bsd.buildings) {
 							if(b.getX() == p.x && b.getY() == p.y) {
-								buildingMenuList.add(b);
+								b.click(p);
 								break;
 							}
 						}
@@ -126,8 +136,7 @@ public class Render implements Runnable {
 
 			@Override
 			public void mouseReleased(MouseEvent e) {
-				// TODO Auto-generated method stub
-
+				dragging = false;
 			}
 
 			@Override
@@ -139,25 +148,38 @@ public class Render implements Runnable {
 			@Override
 			public void mouseExited(MouseEvent e) {
 				// TODO Auto-generated method stub
-
+				
 			}
 		});
 		canvas.addMouseMotionListener(new MouseMotionListener() {
 
 			@Override
 			public void mouseDragged(MouseEvent e) {
+				boolean handled = false;
 				int x = (int) (e.getX() - camX) * 2 / (height);
 				int y = (int) (e.getY() - camY) / sideLength;
-				if (tileMode != Tile.building) {
-					World.world.get(y).set(x, tileMode);
-					World.world.get(y -1).set(x, tileMode);
-					World.world.get(y + 1).set(x, tileMode);
-					World.world.get(y).set(x + 1, tileMode);
-					World.world.get(y).set(x - 1, tileMode);
-					
+				if(!dragging) {
+					for(BuildingMenu bM : buildingMenuList) {
+						if((e.getX() > bM.getX() && e.getX() < bM.getSizeX() + bM.getX()) && (e.getY() > bM.getY() && e.getY() < bM.getSizeY() + bM.getY())) {
+							bM.drag(new Point(e.getX(), e.getY()));
+							bMBeingDragged = bM;
+							handled = true;
+							dragging = true;
+						}
+					}
+					if (!handled) {
+						if (tileMode != Tile.building) {
+							World.world.get(y).set(x, tileMode);
+							World.world.get(y -1).set(x, tileMode);
+							World.world.get(y + 1).set(x, tileMode);
+							World.world.get(y).set(x + 1, tileMode);
+							World.world.get(y).set(x - 1, tileMode);
+						}
+					}
+				} else {
+					bMBeingDragged.drag(new Point(e.getX(), e.getY()));
 				}
-				
-			}
+			} 
 
 			@Override
 			public void mouseMoved(MouseEvent e) {
@@ -203,6 +225,7 @@ public class Render implements Runnable {
 					camX += step;
 				} else if (e.getKeyCode() == 27) {// esc
 					try {
+						ResourceManager.save("BuildingSaveData", StateMachine.bsd);
 						World.saveWorld();
 					} catch (IOException e1) {
 						// TODO Auto-generated catch block
@@ -268,11 +291,8 @@ public class Render implements Runnable {
 	}
 
 	private void renderBuildingMenu(Graphics g) {
-		int i = 0;
-		for (Building b : buildingMenuList) {
-			g.setColor(Color.yellow);
-			g.fillRect(700, 700 + 120 * i, 60, 60);
-			i++;
+		for (BuildingMenu b : buildingMenuList) {
+			b.draw(g);
 		}
 	}
 	
