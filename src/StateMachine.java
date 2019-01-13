@@ -1,4 +1,3 @@
-import java.io.FileNotFoundException;
 import java.io.IOException;
 
 public class StateMachine implements Runnable {
@@ -7,17 +6,17 @@ public class StateMachine implements Runnable {
 	 */
 	static Render render = new Render();
 	static BuildingSaveData bsd = null;
+	int state = 0;
+	boolean running = false;
 	
 	public void gameLoop() {
-		while(true) { //60hz loop here
-			if (render.isInit && render.running) {
-				render.renderWorld();
-			} else if(!render.isInit){
-				System.out.print("");//really important to keep the loop running, again won't be needed later
-			}
+		while(running) { //60hz loop here
+			render.state = state;
+			System.out.print("");//really important to keep the loop running, again won't be needed later
 		}
 	}
 	public void load(){
+		running = true;
 		World.loadWorld("WorldNew");
 		new Thread(render).start();
 		try {

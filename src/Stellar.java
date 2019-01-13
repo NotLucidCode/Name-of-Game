@@ -6,7 +6,6 @@ public class Stellar {
 		//start logs
 		//start game
 		new Thread(new StateMachine()).start();
-	
 		//new Thread(new Receive()).start();
 		//new Thread(new Send()).start();
 		

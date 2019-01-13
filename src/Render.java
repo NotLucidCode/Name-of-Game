@@ -15,9 +15,7 @@ import java.awt.event.MouseMotionListener;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.image.BufferStrategy;
-
 import java.io.IOException;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -64,14 +62,12 @@ public class Render implements Runnable {
 						new int[] { pixelY, pixelY + sideLength, pixelY + sideLength / 2 }, 3);
 
 			}
-		}
-		renderButtons(g);
-		renderBuildingMenu(g);
-		bs.show();
+		}	
 	}
 
 	public void setupFrame() {
-
+		
+		running = true;
 		frame.setVisible(true);
 		canvas.setVisible(true);
 		if (System.getProperty("os.name").toLowerCase().indexOf("win") >= 0) {
@@ -103,15 +99,17 @@ public class Render implements Runnable {
 						handled = true;
 					}
 				}
-				for(BuildingMenu bM : buildingMenuList) {
-					if((e.getX() > bM.getX() && e.getX() < bM.getSizeX() + bM.getX()) && (e.getY() > bM.getY() && e.getY() < bM.getSizeY() + bM.getY())) {
-						bM.click(new Point(e.getX(), e.getY()));
-						handled = true;
+				try {
+					for(BuildingMenu bM : buildingMenuList) {
+						if((e.getX() > bM.getX() && e.getX() < bM.getSizeX() + bM.getX()) && (e.getY() > bM.getY() && e.getY() < bM.getSizeY() + bM.getY())) {
+							bM.click(new Point(e.getX(), e.getY()));
+							handled = true;
+						}
 					}
+				}catch(Exception ex) {
+					ex.printStackTrace();
 				}
 				if (!handled) {
-					//System.out.println(
-					//		"Click at " + (e.getX() + camX) * 2 / (height) + ", " + (e.getY() + camY) / sideLength);
 					int x = (int) Math.round((e.getX() - camX) * 2 / (height));
 					int y = (int) Math.round((e.getY() - camY) / sideLength);
 					if (World.world.get(y).get(x).equals(Tile.building) || World.world.get(y).get(x).equals(Tile.buildingSlave)) {
@@ -236,6 +234,12 @@ public class Render implements Runnable {
 					currentBuildingSize = 0;
 				} else if(e.getKeyCode() == 50) {
 					currentBuildingSize = 1;
+				} else if(e.getKeyCode() == 51) {
+					currentBuildingSize = 2;
+				} else if(e.getKeyCode() == 52) {
+					currentBuildingSize = 3;
+				} else if(e.getKeyCode() == 53) {
+					currentBuildingSize = 4;
 				}
 
 			}
@@ -291,13 +295,19 @@ public class Render implements Runnable {
 	}
 
 	private void renderBuildingMenu(Graphics g) {
+		try {
 		for (BuildingMenu b : buildingMenuList) {
 			b.draw(g);
+		}
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 	
 	@Override
 	public void run() {
 		setupFrame();
+		renderLoop();
+		System.out.println(Thread.currentThread());
 	}
 }
