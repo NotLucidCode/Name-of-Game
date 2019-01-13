@@ -44,10 +44,22 @@ public class Render implements Runnable {
 	int currentBuildingSize = 0;
 	boolean dragging = false;
 	BuildingMenu bMBeingDragged = null;
+	int state = 0;
 	
-	public void renderWorld() {
+	public void renderLoop() {
+		while(true) {
+			g = bs.getDrawGraphics();
+			if(state == 0) {
+				renderWorld(g);
+				renderButtons(g);
+			}
+			bs.show();
+		}
+	}
+	
+	public void renderWorld(Graphics g) {
 
-		g = bs.getDrawGraphics();
+	
 		for (int x = 0; x < (int) World.world.get(0).size() * 2 + 2; x++) {
 			for (int y = 0; y < (int) World.world.size() + 2; y++) {
 				if (y < World.world.size() && x < World.world.get(y).size()) {
