@@ -15,7 +15,7 @@ public class Building implements Serializable {
 		this.x = x;
 		this.y = y;
 		this.size = size;
-		StateMachine.bsd.buildings.add(this);
+		StateMachine.sd.buildings.add(this);
 	}
 	public void create() {
 		ArrayList<Polygon> tileSizes = new ArrayList<Polygon>();

@@ -15,7 +15,6 @@ import java.awt.event.MouseMotionListener;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.image.BufferStrategy;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -36,45 +35,56 @@ public class Render implements Runnable {
 	boolean running = true;
 	int WIDTH = /**1920;*/  Toolkit.getDefaultToolkit().getScreenSize().width;
 	int HEIGHT = /**1080;*/Toolkit.getDefaultToolkit().getScreenSize().height;
-	GraphicsDevice device = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
+	GraphicsDevice device = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices()[1];
 	Graphics g = null;
 	Tile tileMode = Tile.land;
 	static volatile ArrayList<BuildingMenu> buildingMenuList = new ArrayList<BuildingMenu>();
 	volatile HashMap<Polygon, Tile> buttonMap = new HashMap<Polygon, Tile>();
+	volatile HashMap<Polygon, Integer> tabMap = new HashMap<Polygon, Integer>();
+	volatile HashMap<Polygon, Integer> buildingSizeMap =  new HashMap<Polygon, Integer>();
+	int tabState = 0;
 	int currentBuildingSize = 0;
 	boolean dragging = false;
 	BuildingMenu bMBeingDragged = null;
 	int state = 0;
 	
 	public void renderLoop() {
-		while(true) {
-			g = bs.getDrawGraphics();
-			if(state == 0) {
-				renderWorld(g);
-				renderButtons(g);
+		while(running) {
+			try {
+				g = bs.getDrawGraphics();
+				if(state == 0) { //game state, display the world and everything that goes along with it			
+					renderWorld(g);
+					renderButtons(g);
+					renderBuildingMenu(g);
+				}
+				bs.show();
+			} catch (Exception e) {
+				//log.add("Unable to render frame");
 			}
-			bs.show();
 		}
 	}
 	
 	public void renderWorld(Graphics g) {
-
+		
+		try {
+			for (int x = 0; x < (int) World.world.get(0).size() * 2 + 2; x++) {
+				for (int y = 0; y < (int) World.world.size() + 2; y++) {
+					if (y < World.world.size() && x < World.world.get(y).size()) {
+						g.setColor(World.world.get(y).get(x).getColor());
+					} else {
+						g.setColor(Color.BLACK);
+					}
+					int pixelX = (x - (int) x / 2) * height + camX;
+					int pixelY = (x - (int) x / 2) % 2 == 0 ? y * sideLength + camY
+							: y * sideLength + camY - sideLength / 2;
+					g.fillPolygon(new int[] { pixelX, pixelX, x % 2 == 0 ? pixelX + height : pixelX - height },
+							new int[] { pixelY, pixelY + sideLength, pixelY + sideLength / 2 }, 3);
 	
-		for (int x = 0; x < (int) World.world.get(0).size() * 2 + 2; x++) {
-			for (int y = 0; y < (int) World.world.size() + 2; y++) {
-				if (y < World.world.size() && x < World.world.get(y).size()) {
-					g.setColor(World.world.get(y).get(x).getColor());
-				} else {
-					g.setColor(Color.BLACK);
 				}
-				int pixelX = (x - (int) x / 2) * height + camX;
-				int pixelY = (x - (int) x / 2) % 2 == 0 ? y * sideLength + camY
-						: y * sideLength + camY - sideLength / 2;
-				g.fillPolygon(new int[] { pixelX, pixelX, x % 2 == 0 ? pixelX + height : pixelX - height },
-						new int[] { pixelY, pixelY + sideLength, pixelY + sideLength / 2 }, 3);
-
-			}
-		}	
+			}	
+		}catch(Exception e) {
+			
+		}
 	}
 
 	public void setupFrame() {
@@ -105,9 +115,21 @@ public class Render implements Runnable {
 			@Override
 			public void mousePressed(MouseEvent e) {
 				boolean handled = false;
+				int i = 0;
 				for (Polygon p : buttonMap.keySet()) {
 					if (p.contains(e.getPoint())) {
 						tileMode = buttonMap.get(p);
+						handled = true;
+						if(buttonMap.get(p).equals(Tile.building)) {
+							currentBuildingSize = buildingSizeMap.get(p);
+						}
+					}
+					i++;
+				}
+				
+				for (Polygon p : tabMap.keySet()) {
+					if (p.contains(e.getPoint())) {
+						tabState = tabMap.get(p);
 						handled = true;
 					}
 				}
@@ -120,6 +142,7 @@ public class Render implements Runnable {
 					}
 				}catch(Exception ex) {
 					ex.printStackTrace();
+					handled = true;
 				}
 				if (!handled) {
 					int x = (int) Math.round((e.getX() - camX) * 2 / (height));
@@ -129,7 +152,7 @@ public class Render implements Runnable {
 						if (World.world.get(y).get(x).equals(Tile.buildingSlave)) {
 							p = Tile.buildingSlave.getRpTable().get(new Point(x,y));
 						}
-						for(Building b : StateMachine.bsd.buildings) {
+						for(Building b : StateMachine.sd.buildings) {
 							if(b.getX() == p.x && b.getY() == p.y) {
 								b.click(p);
 								break;
@@ -234,14 +257,13 @@ public class Render implements Runnable {
 				} else if (e.getKeyCode() == 68) {// D
 					camX += step;
 				} else if (e.getKeyCode() == 27) {// esc
-					try {
-						ResourceManager.save("BuildingSaveData", StateMachine.bsd);
-						World.saveWorld();
-					} catch (IOException e1) {
+					try {				
+						StateMachine.stop();
+					} catch (Exception e1) {
 						// TODO Auto-generated catch block
 						e1.printStackTrace();
 					}
-					System.exit(0);
+//					System.exit(0);
 				} else if(e.getKeyCode() == 49) {
 					currentBuildingSize = 0;
 				} else if(e.getKeyCode() == 50) {
@@ -259,58 +281,122 @@ public class Render implements Runnable {
 		canvas.createBufferStrategy(3);
 		canvas.requestFocus();
 		bs = canvas.getBufferStrategy();
+		
+		tabMap.put(new Polygon(new int[] {0 * (WIDTH / 32) + WIDTH / 32, 2 * WIDTH / 32, 2 * WIDTH / 32, 0 * (WIDTH / 32) + WIDTH / 32}, new int[] {HEIGHT- HEIGHT / 8, HEIGHT - HEIGHT / 8, HEIGHT - HEIGHT / 16 , HEIGHT - HEIGHT / 16}, 4),0);
+		tabMap.put(new Polygon(new int[] {1 * (WIDTH / 32) + WIDTH / 32 + 50, 3 * WIDTH / 32 + 50, 3 * WIDTH / 32 + 50, 1 * (WIDTH / 32) + WIDTH / 32 + 50}, new int[] {HEIGHT- HEIGHT / 8, HEIGHT - HEIGHT / 8, HEIGHT - HEIGHT / 16 , HEIGHT - HEIGHT / 16}, 4),1);
+		tabMap.put(new Polygon(new int[] {2 * (WIDTH / 32) + WIDTH / 32 + 100, 4 * WIDTH / 32 + 100, 4 * WIDTH / 32 + 100, 2 * (WIDTH / 32) + WIDTH / 32 + 100}, new int[] {HEIGHT- HEIGHT / 8, HEIGHT - HEIGHT / 8, HEIGHT - HEIGHT / 16 , HEIGHT - HEIGHT / 16}, 4),2);
+		tabMap.put(new Polygon(new int[] {3 * (WIDTH / 32) + WIDTH / 32 + 150, 5 * WIDTH / 32 + 150, 5 * WIDTH / 32 + 150, 3 * (WIDTH / 32) + WIDTH / 32 + 150}, new int[] {HEIGHT- HEIGHT / 8, HEIGHT - HEIGHT / 8, HEIGHT - HEIGHT / 16 , HEIGHT - HEIGHT / 16}, 4),3);
+		
 		isInit = true;
 
 	}
 
 	private void renderButtons(Graphics g) {
-		
-		g.setColor(Color.RED);
-		int startX = (int) WIDTH / 8;
+		buttonMap =  new HashMap<Polygon, Tile>();
+		buildingSizeMap =  new HashMap<Polygon, Integer>();
+		g.setColor(Color.DARK_GRAY);
+		for (Polygon p : tabMap.keySet()) {
+			g.fillPolygon(p);
+		}
+		int startX = (int) WIDTH / 16;
 		int buttonSize = 80;
 		int startY = (int) HEIGHT - buttonSize;
-
-		Polygon landButton = new Polygon(new int[] { startX, startX, startX + buttonSize, startX + buttonSize },
-				new int[] { startY, startY + buttonSize, startY + buttonSize, startY }, 4);
-		buttonMap.put(landButton, Tile.land);
-		g.fillPolygon(landButton);
-
-		g.setColor(Color.CYAN);
-		startX = (int) 2 * (WIDTH / 8);
-		buttonSize = 80;
-		startY = (int) HEIGHT - buttonSize;
-
-		Polygon waterButton = new Polygon(new int[] { startX, startX, startX + buttonSize, startX + buttonSize },
-				new int[] { startY, startY + buttonSize, startY + buttonSize, startY }, 4);
-		buttonMap.put(waterButton, Tile.water);
-		g.fillPolygon(waterButton);
-
-		g.setColor(Color.DARK_GRAY);
-		startX = (int) 3 * (WIDTH / 8);
-		buttonSize = 80;
-		startY = (int) HEIGHT - buttonSize;
-
-		Polygon edgeButton = new Polygon(new int[] { startX, startX, startX + buttonSize, startX + buttonSize },
-				new int[] { startY, startY + buttonSize, startY + buttonSize, startY }, 4);
-		buttonMap.put(edgeButton, Tile.edge);
-		g.fillPolygon(edgeButton);
-
-		g.setColor(Color.DARK_GRAY);
-		startX = (int) 4 * (WIDTH / 8);
-		buttonSize = 80;
-		startY = (int) HEIGHT - buttonSize;
-
-		Polygon buildingButton = new Polygon(new int[] { startX, startX, startX + buttonSize, startX + buttonSize },
-				new int[] { startY, startY + buttonSize, startY + buttonSize, startY }, 4);
-		buttonMap.put(buildingButton, Tile.building);
-		g.fillPolygon(buildingButton);
+		if(tabState == 0) {
+			
+			g.setColor(Color.RED);
+			Polygon landButton = new Polygon(new int[] { startX, startX, startX + buttonSize, startX + buttonSize },
+					new int[] { startY, startY + buttonSize, startY + buttonSize, startY }, 4);
+			buttonMap.put(landButton, Tile.land);
+			g.fillPolygon(landButton);
+	
+			g.setColor(Color.CYAN);
+			startX = (int) 2 * (WIDTH / 16);
+			buttonSize = 80;
+			startY = (int) HEIGHT - buttonSize;
+	
+			Polygon waterButton = new Polygon(new int[] { startX, startX, startX + buttonSize, startX + buttonSize },
+					new int[] { startY, startY + buttonSize, startY + buttonSize, startY }, 4);
+			buttonMap.put(waterButton, Tile.water);
+			g.fillPolygon(waterButton);
+	
+			g.setColor(Color.DARK_GRAY);
+			startX = (int) 3 * (WIDTH / 16);
+			buttonSize = 80;
+			startY = (int) HEIGHT - buttonSize;
+	
+			Polygon edgeButton = new Polygon(new int[] { startX, startX, startX + buttonSize, startX + buttonSize },
+					new int[] { startY, startY + buttonSize, startY + buttonSize, startY }, 4);
+			buttonMap.put(edgeButton, Tile.edge);
+			g.fillPolygon(edgeButton);
+	
+			g.setColor(new Color(194,178,128));
+			startX = (int) 4 * (WIDTH / 16);
+			buttonSize = 80;
+			startY = (int) HEIGHT - buttonSize;
+	
+			Polygon sandButton = new Polygon(new int[] { startX, startX, startX + buttonSize, startX + buttonSize },
+					new int[] { startY, startY + buttonSize, startY + buttonSize, startY }, 4);
+			buttonMap.put(sandButton, Tile.sand);
+			g.fillPolygon(sandButton);	
+		} else if (tabState == 1) {
+			g.setColor(Color.DARK_GRAY);
+			Polygon size0 = new Polygon(new int[] { startX, startX, startX + buttonSize, startX + buttonSize },
+					new int[] { startY, startY + buttonSize, startY + buttonSize, startY }, 4);
+			buttonMap.put(size0, Tile.building);
+			buildingSizeMap.put(size0, 0);
+			g.fillPolygon(size0);
+	
+			g.setColor(Color.DARK_GRAY);
+			startX = (int) 2 * (WIDTH / 16);
+			buttonSize = 80;
+			startY = (int) HEIGHT - buttonSize;
+	
+			Polygon size1 = new Polygon(new int[] { startX, startX, startX + buttonSize, startX + buttonSize },
+					new int[] { startY, startY + buttonSize, startY + buttonSize, startY }, 4);
+			buttonMap.put(size1, Tile.building);
+			buildingSizeMap.put(size1, 1);
+			g.fillPolygon(size1);
+	
+			g.setColor(Color.DARK_GRAY);
+			startX = (int) 3 * (WIDTH / 16);
+			buttonSize = 80;
+			startY = (int) HEIGHT - buttonSize;
+	
+			Polygon size2 = new Polygon(new int[] { startX, startX, startX + buttonSize, startX + buttonSize },
+					new int[] { startY, startY + buttonSize, startY + buttonSize, startY }, 4);
+			buttonMap.put(size2, Tile.building);
+			buildingSizeMap.put(size2, 2);
+			g.fillPolygon(size2);
+	
+			g.setColor(Color.DARK_GRAY);
+			startX = (int) 4 * (WIDTH / 16);
+			buttonSize = 80;
+			startY = (int) HEIGHT - buttonSize;
+	
+			Polygon size3 = new Polygon(new int[] { startX, startX, startX + buttonSize, startX + buttonSize },
+					new int[] { startY, startY + buttonSize, startY + buttonSize, startY }, 4);
+			buttonMap.put(size3, Tile.building);
+			buildingSizeMap.put(size3, 3);
+			g.fillPolygon(size3);
+			
+			g.setColor(Color.DARK_GRAY);
+			startX = (int) 5 * (WIDTH / 16);
+			buttonSize = 80;
+			startY = (int) HEIGHT - buttonSize;
+	
+			Polygon size4 = new Polygon(new int[] { startX, startX, startX + buttonSize, startX + buttonSize },
+					new int[] { startY, startY + buttonSize, startY + buttonSize, startY }, 4);
+			buttonMap.put(size4, Tile.building);
+			buildingSizeMap.put(size4, 4);
+			g.fillPolygon(size4);
+		}
 	}
 
 	private void renderBuildingMenu(Graphics g) {
 		try {
-		for (BuildingMenu b : buildingMenuList) {
-			b.draw(g);
-		}
+			for (BuildingMenu b : buildingMenuList) {
+				b.draw(g);
+			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -320,6 +406,5 @@ public class Render implements Runnable {
 	public void run() {
 		setupFrame();
 		renderLoop();
-		System.out.println(Thread.currentThread());
 	}
 }

@@ -7,6 +7,7 @@ public enum Tile {
 	edge(-1, Color.BLACK),
 	water(0, Color.BLUE),
 	land(1, Color.GREEN),
+	sand(4, new Color(194,178,128)),
 	building(2, Color.LIGHT_GRAY),
 	buildingSlave(3, Color.WHITE);//new Color(0,0,0,0));
 	

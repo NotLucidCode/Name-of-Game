@@ -5,12 +5,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 
 public class ResourceManager {
 	public static File load(String fileName){
 		return new File("./Content/" + fileName);
 	}
-	public static void save(String fileName, Object obj) throws IOException {
+	public static void save(String fileName, Serializable obj) throws IOException {
         ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream("./Content/" + fileName)); 
         out.writeObject(obj);
         out.close();

@@ -5,9 +5,9 @@ public class StateMachine implements Runnable {
 	 * 
 	 */
 	static Render render = new Render();
-	static BuildingSaveData bsd = null;
+	static SaveData sd = null;
 	int state = 0;
-	boolean running = false;
+	static boolean running = false;
 	
 	public void gameLoop() {
 		while(running) { //60hz loop here
@@ -15,19 +15,37 @@ public class StateMachine implements Runnable {
 			System.out.print("");//really important to keep the loop running, again won't be needed later
 		}
 	}
+	
+	public static void stop() {
+		running = false;
+		render.running = false;
+		render.frame.dispose();
+		sd.world = World.world;
+		try {
+			ResourceManager.save("SaveData", sd);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	
+	}
+	
 	public void load(){
 		running = true;
-		World.loadWorld("WorldNew");
 		new Thread(render).start();
 		try {
-			bsd  = (BuildingSaveData) ResourceManager.loadObject("BuildingSaveData");
+			sd  = (SaveData) ResourceManager.loadObject("SaveData");
+			World.world = sd.world;
 		} catch (ClassNotFoundException | IOException e) {
-			// TODO Auto-generated catch block
+			sd = null;
 			//e.printStackTrace();
+			//log.add("No SaveData found, loading new");
 		}
-		if(bsd == null) {
-			bsd = new BuildingSaveData();
+		if(sd == null) {
+			sd = new SaveData();
+			World.loadWorld("WorldNew");
 		}
+		
 	}
 	@Override
 	public void run() {
