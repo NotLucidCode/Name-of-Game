@@ -1,26 +1,35 @@
 import java.io.IOException;
 
+import javax.swing.JFrame;
+
 public class StateMachine implements Runnable {
 	/**
 	 * 
 	 */
 	static Render render = new Render();
+	//static AudioFile audio = new AudioFile("./Content/Audio/BackgroundMusic");
+	static MusicPlayer music = new MusicPlayer(true);
 	static SaveData sd = null;
 	int state = 0;
 	static boolean running = false;
+	static int money = 0, pop = 0, goods = 0, reqPop = 0;
 	
 	public void gameLoop() {
-		while(running) { //60hz loop here
+		while(running) { 
 			render.state = state;
-			System.out.print("");//really important to keep the loop running, again won't be needed later
+			tick();
 		}
 	}
 	
 	public static void stop() {
+		music.stop();
 		running = false;
 		render.running = false;
-		render.frame.dispose();
+		for(JFrame j : render.JFrames) {
+			j.dispose();
+		}
 		sd.world = World.world;
+		sd.rpTable = Tile.buildingSlave.getRpTable();
 		try {
 			ResourceManager.save("SaveData", sd);
 		} catch (IOException e) {
@@ -30,12 +39,19 @@ public class StateMachine implements Runnable {
 	
 	}
 	
+	public void tick() {
+		//one tick of the game has been completed
+		System.out.print("");
+	}
+	
 	public void load(){
 		running = true;
 		new Thread(render).start();
+		new Thread(music).start();
 		try {
 			sd  = (SaveData) ResourceManager.loadObject("SaveData");
 			World.world = sd.world;
+			Tile.buildingSlave.setRpTable(sd.rpTable);
 		} catch (ClassNotFoundException | IOException e) {
 			sd = null;
 			//e.printStackTrace();

@@ -27,4 +27,7 @@ public enum Tile {
 	public Hashtable<Point,Point> getRpTable() {
 		return rpTable;
 	}
+	public void setRpTable(Hashtable<Point,Point> table) {
+		rpTable = table;
+	}
 }
